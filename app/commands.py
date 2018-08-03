@@ -3,41 +3,24 @@ import click
 from pydrive.auth import GoogleAuth, ServiceAccountCredentials
 from pydrive.drive import GoogleDrive
 
+from app.constants import Files
+from app.services.drive import AuthServiceAccount, LMDownloader
+from app.services.tokens import TokensParser, AnswersParser, TokensUpdater
+
 
 @click.command()
 # @click.argument('asd')
-def my_command():
-    def auth():
-        JSON_FILE = 'client_secrets.json'
+def asd():
 
-        gauth = GoogleAuth()
-        gauth.credentials = ServiceAccountCredentials.from_json_keyfile_name(JSON_FILE, scopes=[
-            'https://www.googleapis.com/auth/drive'])
-        drive = GoogleDrive(gauth)
+    sessions_to_update = list(range(240,266))
 
-        return drive
+    # drive = AuthServiceAccount().drive
+    # downloaded_files = LMDownloader(drive).download_files()
+    # answers_file = downloaded_files[Files.ANSWERS_FILE_ID]
+    # tokens_file = downloaded_files[Files.TOKENS_FILE_ID]
+    answers_file = 'answers.xlsx'
+    tokens_file = 'tokens.xlsx'
+    #todo object pt extracted_answers
+    extracted_answers = AnswersParser(answers_file, sessions_to_update).extract_answers_data()
 
-    def update(drive: GoogleDrive):
-        TOKENS_FILE_ID = '1aU9ATPq5HsraAFOIiijYJx0OqQgIVQ5LdKB3yKioZhg'
-        ANSWERS_FILE_ID = '1c701qti631UnXbo_nlD1qFkSrLDxAEsA6db0WAllmS0'
-
-        tokens_file = drive.CreateFile({'id': TOKENS_FILE_ID})
-        # print('title: %s, mimeType: %s' % (tokens_file['title'], tokens_file['mimeType']))
-
-        mimetypes = {
-            # Drive Document files as MS Word files.
-            'application/vnd.google-apps.document': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-
-            # Drive Sheets files as MS Excel files.
-            'application/vnd.google-apps.spreadsheet': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-
-            # etc.
-        }
-
-        download_mimetype = None
-        if tokens_file['mimeType'] in mimetypes:
-            download_mimetype = mimetypes[tokens_file['mimeType']]
-        tokens_file.FetchMetadata(fetch_all=True)
-        tokens_file.GetContentFile(tokens_file['title'] +'.xlsx', mimetype=download_mimetype)
-    drive = auth()
-    update(drive)
+    TokensUpdater(tokens_file, extracted_answers).update()

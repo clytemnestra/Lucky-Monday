@@ -1,7 +1,7 @@
 from flask import Flask
 
 from app import commands
-from app.commands import my_command
+from app.commands import asd
 from app.views import application
 
 
@@ -18,4 +18,4 @@ def _register_blueprints(app):
     app.register_blueprint(application)
 
 def _register_cli(app):
-    app.cli.add_command(commands.my_command)
+    app.cli.add_command(commands.asd)
