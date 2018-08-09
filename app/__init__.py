@@ -12,6 +12,8 @@ def create_app():
     _register_cli(app)
     _register_blueprints(app)
 
+    print(app.config.from_json('app.asd'))
+
     return app
 
 def _register_blueprints(app):
