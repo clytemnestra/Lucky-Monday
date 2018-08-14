@@ -1,5 +1,7 @@
 from abc import abstractmethod
 
+import click
+
 
 class CommandOutput:
     def __init__(self):
@@ -28,10 +30,10 @@ class CommandObserver:
 class CommandLogger(CommandObserver):
     def update(self, data):
         #todo add logging
-        print(data)
+        # print(data)
         pass
 
 
 class CommandPrinter(CommandObserver):
     def update(self, data: str):
-        print(data)
+        click.echo(data)
