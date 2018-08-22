@@ -18,7 +18,7 @@ from app.services.tokens import AnswersParser, TokensUpdater
 # @click.argument('asd')
 def asd():
     start = 240
-    end = 255
+    end = 268
     verbose = True
     log = True
 
@@ -27,20 +27,21 @@ def asd():
     sessions_to_update = list(range(start, end + 1))
     out, printer, logger = setup_output(verbose, log)
 
-    # drive = AuthServiceAccount().drive
-    # print('Downloading files...')
-    # downloaded_files = LMDownloader(drive).download_files()
-    # answers_file = downloaded_files[Files.ANSWERS_FILE_ID]
-    # tokens_file = downloaded_files[Files.TOKENS_FILE_ID]
-    # print('Downloaded' + answers_file + tokens_file)
+    drive = AuthServiceAccount().drive
+    print('Downloading files...')
+    downloaded_files = LMDownloader(drive).download_files()
+    answers_file = downloaded_files[Files.ANSWERS_FILE_ID]
+    tokens_file = downloaded_files[Files.TOKENS_FILE_ID]
+    print('Downloaded ' + answers_file + tokens_file)
     answers_file = 'answers.xlsx'
     tokens_file = 'tokens.xlsx'
     out.notifyObservers('Extracting answers...')
     extracted_answers = AnswersParser(answers_file, sessions_to_update).extract_answers_data()
 
+    updater = TokensUpdater(tokens_file)
+
     for session_id, session_results in extracted_answers.items():
         out.notifyObservers('Updating session %s with %s entries' % (session_id, len(session_results)))
-        updater = TokensUpdater(tokens_file)
 
         session_column, new_column_placement = updater.find_session_column(session_id)
         out.notifyObservers('Searching if session column exists')
@@ -68,10 +69,17 @@ def asd():
                 nickname_row = updater.create_nickname_row(nickname)
                 out.notifyObservers('Created username at row %s' % nickname_row)
 
+            out.notifyObservers('Updating tokens...')
             updater.update_user_tokens(nickname_row, session_column, tokens_value)
-            # updater.update_user_bonuses()
-        updater.update_users_formula()
-        updater.save_file()
+            # out.notifyObservers('Updating bonuses...')
+            # updater.update_user_bonuses(nickname_row, session_column)
+
+    out.notifyObservers('Updating tokens formula...')
+    updater.update_users_formula()
+
+    out.notifyObservers('Saving file locally...')
+
+    updater.save_file()
 
 
 def setup_output(verbose, log):

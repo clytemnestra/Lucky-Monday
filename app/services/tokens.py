@@ -1,7 +1,8 @@
 from copy import copy
+from difflib import SequenceMatcher
 from typing import NamedTuple
 
-from openpyxl import load_workbook
+from openpyxl import load_workbook, styles
 from openpyxl.formula import Tokenizer
 from openpyxl.styles import Font, Alignment
 from openpyxl.styles.cell_style import CellStyle
@@ -26,6 +27,10 @@ from app.constants import Files
 
 class TokensUpdater:
     nicknames_column = column_index_from_string(Files.TOKENS_NICKNAMES_COL)
+    similarity_ratio = 0.7
+    double_cell_color = 'FF00FFFF'
+    reverse_double_cell_color = 'FFFF9900'
+    cell_no_bonus_color = '00000000'
 
     def __init__(self, file):
         self.file = file
@@ -51,8 +56,40 @@ class TokensUpdater:
                                                         current_cell.row)
                 current_cell.value = tok.render()
 
-    def update_user_bonuses(self):
-        pass
+    def update_user_bonuses(self, nickname_row, session_column):
+
+        how_much_to_go_back = 6
+
+        for col in self.sheet.iter_cols(min_col=session_column, min_row=nickname_row, max_row=nickname_row):
+
+            cell = col[0]
+
+            if column_index_from_string(cell.column) - session_column >= how_much_to_go_back:
+                break
+
+            #skip if colored
+            if cell.fill.start_color.index != self.cell_no_bonus_color:
+                break
+            #if has value, start counting
+            count = 0
+            if cell.value:
+                count += cell.value
+
+
+
+            #trace over again looking for 5 streak
+
+            # print(col[0].value)
+
+        # t = self.sheet.cell(row=672, column=column_index_from_string('Z')).fill.start_color.index
+        # i = self.sheet.cell(row=673, column=column_index_from_string('Z')).fill.start_color.index
+        # n = self.sheet.cell(row=673, column=column_index_from_string('AH')).fill.start_color.index
+        # Colors = styles.colors.COLOR_INDEX
+        # result = str(Colors[int(i)])
+        # result = "#" + result[2:]
+        # print(t)
+        # print(i == self.double_cell_color)
+        # print(n == self.reverse_double_cell_color)
 
     def create_nickname_row(self, nickname):
         last_nickname_row = self.sheet.max_row
@@ -62,7 +99,6 @@ class TokensUpdater:
                         column=self.nicknames_column).value = nickname
         self.create_formula_for_nickname(new_nickname_row)
         CellCopy(self.sheet).copy_nickname_row_style_from_above_row(new_nickname_row)
-        self.save_file()
 
         return new_nickname_row
 
@@ -78,17 +114,33 @@ class TokensUpdater:
 
     def find_nickname_row(self, nickname):
         nickname_row = None
-        nickname = nickname.strip()
+        nickname = nickname.strip().lower()
         for row in self.sheet.iter_rows(min_row=2, min_col=self.nicknames_column, max_col=self.nicknames_column):
             current_cell = row[0]
             current_nickname = current_cell.value
             if current_nickname:
-                current_nickname = current_nickname.strip()
+                current_nickname = current_nickname.strip().lower()
                 if (current_nickname == nickname):
                     nickname_row = current_cell.row
                     break
 
         return nickname_row
+
+    def find_similar_nickname_row(self, nickname, similarity_ratio=similarity_ratio):
+        nickname_row = None
+        similar_nickname = None
+        nickname = nickname.strip().lower()
+        for row in self.sheet.iter_rows(min_row=2, min_col=self.nicknames_column, max_col=self.nicknames_column):
+            current_cell = row[0]
+            current_nickname = current_cell.value
+            if current_nickname:
+                current_nickname = current_nickname.strip().lower()
+                if (SequenceMatcher(None, current_nickname, nickname).ratio() >= similarity_ratio):
+                    nickname_row = current_cell.row
+                    similar_nickname = current_nickname
+                    break
+
+        return similar_nickname, nickname_row
 
     def find_session_column(self, id):
         """Find column where to place current session."""
@@ -117,8 +169,6 @@ class TokensUpdater:
         session_header_cell.value = '#' + str(session_id)
         CellCopy(self.sheet).copy_session_header_from_previous(session_header_cell).add_session_borders(
             session_header_cell).fix_last_column_style()
-
-        self.save_file()
 
     def save_file(self):
         self.excel.save(self.file)
